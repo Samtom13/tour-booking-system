@@ -18,13 +18,17 @@ export function ClientAdminView({ userId, clients }: Props) {
   const [error, setError] = useState('')
 
   function toSlug(str: string) {
-    return str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    // 英数字があればそのまま使う、日本語のみなら連番で生成
+    const ascii = str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    if (ascii) return ascii
+    // 日本語など非ASCII文字はローマ字変換の代わりにランダムIDを使う
+    return 'client-' + Math.random().toString(36).slice(2, 8)
   }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     const slug = toSlug(name)
-    if (!slug) { setError('スラッグを生成できません（英数字を含む名前にしてください）'); return }
+    if (!slug) { setError('クライアント名を入力してください'); return }
 
     setLoading(true)
     setError('')
