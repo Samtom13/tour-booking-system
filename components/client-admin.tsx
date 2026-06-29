@@ -14,21 +14,15 @@ type Props = { userId: string; clients: Client[] }
 export function ClientAdminView({ userId, clients }: Props) {
   const router = useRouter()
   const [name, setName] = useState('')
+  const [slug, setSlug] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  function toSlug(str: string) {
-    // 英数字があればそのまま使う、日本語のみなら連番で生成
-    const ascii = str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-    if (ascii) return ascii
-    // 日本語など非ASCII文字はローマ字変換の代わりにランダムIDを使う
-    return 'client-' + Math.random().toString(36).slice(2, 8)
-  }
-
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    const slug = toSlug(name)
-    if (!slug) { setError('クライアント名を入力してください'); return }
+    if (!name) { setError('クライアント名を入力してください'); return }
+    if (!slug) { setError('スラッグを入力してください'); return }
+    if (!/^[a-z0-9-]+$/.test(slug)) { setError('スラッグは英小文字・数字・ハイフンのみ使えます'); return }
 
     setLoading(true)
     setError('')
@@ -36,7 +30,7 @@ export function ClientAdminView({ userId, clients }: Props) {
 
     const { data: newClient, error: insertErr } = await supabase
       .from('clients')
-      .insert({ name, slug })
+      .insert({ name, slug: slug.toLowerCase() })
       .select()
       .single()
 
@@ -50,6 +44,7 @@ export function ClientAdminView({ userId, clients }: Props) {
     await supabase.from('user_clients').insert({ user_id: userId, client_id: newClient.id, role: 'admin' })
 
     setName('')
+    setSlug('')
     setLoading(false)
     router.refresh()
   }
@@ -70,12 +65,18 @@ export function ClientAdminView({ userId, clients }: Props) {
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="クライアントA"
+            placeholder="平安玉凰陶苑"
             required
           />
-          {name && (
-            <p className="text-xs text-gray-400">スラッグ：{toSlug(name)}</p>
-          )}
+        </div>
+        <div className="space-y-1">
+          <Label>スラッグ（URL用・英小文字・数字・ハイフンのみ）</Label>
+          <Input
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder="heian-gyokuo"
+            required
+          />
         </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
         <Button type="submit" size="sm" disabled={loading}>
