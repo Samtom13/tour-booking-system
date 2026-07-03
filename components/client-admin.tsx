@@ -26,22 +26,18 @@ export function ClientAdminView({ userId, clients }: Props) {
 
     setLoading(true)
     setError('')
-    const supabase = createClient()
 
-    const { data: newClient, error: insertErr } = await supabase
-      .from('clients')
-      .insert({ name, slug: slug.toLowerCase() })
-      .select()
-      .single()
-
-    if (insertErr) {
-      setError('同じスラッグのクライアントが既に存在します')
+    const res = await fetch('/api/clients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, slug: slug.toLowerCase() }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setError(data.error ?? '追加に失敗しました')
       setLoading(false)
       return
     }
-
-    // Assign current user to new client
-    await supabase.from('user_clients').insert({ user_id: userId, client_id: newClient.id, role: 'admin' })
 
     setName('')
     setSlug('')
