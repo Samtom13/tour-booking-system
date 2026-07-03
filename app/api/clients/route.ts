@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { randomUUID } from 'crypto'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -7,20 +8,35 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { name, slug } = await req.json()
-  if (!name || !slug) return NextResponse.json({ error: '名前とスラッグは必須です' }, { status: 400 })
+  if (!name) return NextResponse.json({ error: 'クライアント名は必須です' }, { status: 400 })
 
-  const { data: newClient, error } = await supabase
-    .from('clients')
-    .insert({ name, slug })
-    .select()
-    .single()
-
-  if (error) {
-    if (error.code === '23505') return NextResponse.json({ error: '同じスラッグのクライアントが既に存在します' }, { status: 409 })
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  const finalSlug = slug || 'client-' + Math.random().toString(36).slice(2, 8)
+  if (!/^[a-z0-9-]+$/.test(finalSlug)) {
+    return NextResponse.json({ error: 'スラッグは英小文字・数字・ハイフンのみ使えます' }, { status: 400 })
   }
 
-  await supabase.from('user_clients').insert({ user_id: user.id, client_id: newClient.id, role: 'admin' })
+  // RLS上、挿入直後の行はまだ自分に紐付いておらず読み返せないため、
+  // IDをこちらで生成してRETURNINGなしで挿入する
+  const clientId = randomUUID()
+
+  const { error: insertErr } = await supabase
+    .from('clients')
+    .insert({ id: clientId, name, slug: finalSlug })
+
+  if (insertErr) {
+    if (insertErr.code === '23505') {
+      return NextResponse.json({ error: `スラッグ「${finalSlug}」は既に使われています` }, { status: 409 })
+    }
+    return NextResponse.json({ error: insertErr.message }, { status: 500 })
+  }
+
+  const { error: mapErr } = await supabase
+    .from('user_clients')
+    .insert({ user_id: user.id, client_id: clientId, role: 'admin' })
+
+  if (mapErr) {
+    return NextResponse.json({ error: mapErr.message }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true })
 }

@@ -21,8 +21,7 @@ export function ClientAdminView({ userId, clients }: Props) {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!name) { setError('クライアント名を入力してください'); return }
-    if (!slug) { setError('スラッグを入力してください'); return }
-    if (!/^[a-z0-9-]+$/.test(slug)) { setError('スラッグは英小文字・数字・ハイフンのみ使えます'); return }
+    if (slug && !/^[a-z0-9-]+$/.test(slug.toLowerCase())) { setError('スラッグは英小文字・数字・ハイフンのみ使えます'); return }
 
     setLoading(true)
     setError('')
@@ -66,12 +65,11 @@ export function ClientAdminView({ userId, clients }: Props) {
           />
         </div>
         <div className="space-y-1">
-          <Label>スラッグ（URL用・英小文字・数字・ハイフンのみ）</Label>
+          <Label>スラッグ（URL用・空欄なら自動生成）</Label>
           <Input
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="heian-gyokuo"
-            required
+            placeholder="heian-gyokuo（任意）"
           />
         </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
