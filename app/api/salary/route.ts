@@ -86,7 +86,6 @@ export async function GET(req: NextRequest) {
     const override = overrides?.find((o) => o.guide_id === guide.id && o.work_date === date)
     const reviewBonusEnabled = override?.review_bonus ?? false
     const reviewBonus = reviewBonusEnabled ? Math.round(baseWageBase * 0.5) : 0
-    const baseWage = baseWageBase + reviewBonus
 
     const parsedExpenses = extractExpenses(expenseText)
     const expenses = override?.custom_expenses != null ? override.custom_expenses : parsedExpenses

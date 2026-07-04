@@ -58,6 +58,7 @@ export function TourManager({ clientId, tours }: Props) {
   }
 
   async function handleDelete(id: string) {
+    if (!confirm('このツアーを削除しますか？')) return
     const supabase = createClient()
     await supabase.from('tours').delete().eq('id', id)
     router.refresh()

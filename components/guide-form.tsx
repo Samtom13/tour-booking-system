@@ -60,6 +60,7 @@ export function GuideManager({ clientId, guides }: Props) {
   }
 
   async function handleDelete(id: string) {
+    if (!confirm('このガイドを削除しますか？')) return
     const supabase = createClient()
     await supabase.from('guides').delete().eq('id', id)
     router.refresh()
@@ -84,7 +85,7 @@ export function GuideManager({ clientId, guides }: Props) {
             </div>
             <div className="space-y-1">
               <Label>時給（円）</Label>
-              <Input type="number" value={form.hourly_rate} onChange={(e) => setForm(p => ({ ...p, hourly_rate: e.target.value }))} required />
+              <Input type="number" min="0" value={form.hourly_rate} onChange={(e) => setForm(p => ({ ...p, hourly_rate: e.target.value }))} required />
             </div>
             <div className="space-y-1">
               <Label>振込先情報</Label>

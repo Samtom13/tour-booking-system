@@ -6,11 +6,9 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { EventClickArg } from '@fullcalendar/core'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { formatJST } from '@/lib/datetime'
 import { ja } from 'date-fns/locale'
 
-function toJST(dateStr: string): Date {
-  return new Date(new Date(dateStr).toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
-}
 import { Plus, Trash2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -103,6 +101,7 @@ export function BondCalendarClient({ clientId, bookings, tours, guides }: Props)
 
   async function handleDelete() {
     if (!selected) return
+    if (!confirm('この予約を削除しますか？')) return
     const supabase = createClient()
     await supabase.from('bookings').delete().eq('id', selected.id)
     setDetailOpen(false)
@@ -229,7 +228,7 @@ export function BondCalendarClient({ clientId, bookings, tours, guides }: Props)
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-2">
                 <span className="text-gray-500">日時</span>
-                <span>{format(toJST(selected.scheduled_at), 'M/d (E) HH:mm', { locale: ja })}</span>
+                <span>{formatJST(selected.scheduled_at, 'M/d (E) HH:mm')}</span>
                 <span className="text-gray-500">ゲスト名</span>
                 <span>{selected.guest_name}</span>
                 <span className="text-gray-500">人数</span>

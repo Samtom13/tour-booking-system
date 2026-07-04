@@ -33,7 +33,7 @@ export default async function ClientLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Nav clientName={client.name} clientSlug={slug} items={NAV_ITEMS} />
+      <Nav clientName={client.name} items={NAV_ITEMS} />
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
         {children}
       </main>

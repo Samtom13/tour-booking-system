@@ -13,8 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { formatJST } from '@/lib/datetime'
 import type { Booking } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -44,6 +43,7 @@ export function BookingCalendar({ bookings, isBond = false }: Props) {
 
   async function handleDelete() {
     if (!selected) return
+    if (!confirm('この予約を削除しますか？')) return
     setDeleting(true)
     const supabase = createClient()
     await supabase.from('bookings').delete().eq('id', selected.id)
@@ -81,7 +81,7 @@ export function BookingCalendar({ bookings, isBond = false }: Props) {
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-2">
                 <span className="text-gray-500">日時</span>
-                <span>{format(new Date(selected.scheduled_at), 'M/d (E) HH:mm', { locale: ja })}</span>
+                <span>{formatJST(selected.scheduled_at, 'M/d (E) HH:mm')}</span>
                 <span className="text-gray-500">ゲスト名</span>
                 <span>{selected.guest_name}</span>
                 <span className="text-gray-500">人数</span>

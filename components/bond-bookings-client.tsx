@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { formatJST } from '@/lib/datetime'
 import { Pencil, Trash2 } from 'lucide-react'
 import { BondBookingForm } from '@/components/bond-booking-form'
 import type { Booking, Tour, Guide } from '@/lib/types'
@@ -30,6 +29,7 @@ export function BondBookingsClient({ clientId, bookings, tours, guides, otaSumma
   }
 
   async function handleDelete(id: string) {
+    if (!confirm('この予約を削除しますか？')) return
     const supabase = createClient()
     await supabase.from('bookings').delete().eq('id', id)
     router.refresh()
@@ -81,7 +81,7 @@ export function BondBookingsClient({ clientId, bookings, tours, guides, otaSumma
                   {b.booking_site && <Badge variant="outline" className="text-xs">{b.booking_site}</Badge>}
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {format(new Date(b.scheduled_at), 'M/d (E) HH:mm', { locale: ja })}
+                  {formatJST(b.scheduled_at, 'M/d (E) HH:mm')}
                   　{b.guest_name}　{b.guest_count}名
                   {b.guide?.name && `　担当：${b.guide.name}`}
                 </p>

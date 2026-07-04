@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { format, subMonths, addMonths } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Pencil, Check, X } from 'lucide-react'
@@ -31,38 +31,43 @@ type GuideResult = {
 
 export function SalaryView() {
   const [month, setMonth] = useState(new Date())
-  const [data, setData] = useState<GuideResult[]>([])
-  const [loading, setLoading] = useState(false)
+  // dataがnull＝読み込み中。選択中ガイドは名前で持ち、常に最新データから引く
+  const [data, setData] = useState<GuideResult[] | null>(null)
   const [error, setError] = useState('')
-  const [selected, setSelected] = useState<GuideResult | null>(null)
-  const [editingRow, setEditingRow] = useState<string | null>(null) // "date" as key
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedName, setSelectedName] = useState<string | null>(null)
+  const [editingRow, setEditingRow] = useState<string | null>(null)
   const [editExpenses, setEditExpenses] = useState('')
   const [saving, setSaving] = useState(false)
 
   const monthKey = format(month, 'yyyy-MM')
 
-  const fetchData = useCallback(() => {
-    setLoading(true)
-    setError('')
+  useEffect(() => {
+    let cancelled = false
     fetch(`/api/salary?month=${monthKey}`)
       .then((r) => r.json())
       .then((d) => {
+        if (cancelled) return
         if (d.error) setError(d.error)
         else setData(d.guides)
       })
-      .catch(() => setError('データの取得に失敗しました'))
-      .finally(() => setLoading(false))
-  }, [monthKey])
+      .catch(() => { if (!cancelled) setError('データの取得に失敗しました') })
+    return () => { cancelled = true }
+  }, [monthKey, refreshKey])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  const loading = data === null && !error
+  const guides = data ?? []
+  const selected = selectedName ? guides.find((g) => g.name === selectedName) ?? null : null
 
-  // 選択中のガイドを最新データで更新
-  useEffect(() => {
-    if (selected) {
-      const updated = data.find(g => g.name === selected.name)
-      if (updated) setSelected(updated)
-    }
-  }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
+  function changeMonth(next: Date) {
+    setMonth(next)
+    setData(null)
+    setError('')
+  }
+
+  function reload() {
+    setRefreshKey((k) => k + 1)
+  }
 
   async function toggleReviewBonus(detail: Detail) {
     setSaving(true)
@@ -77,7 +82,7 @@ export function SalaryView() {
       }),
     })
     setSaving(false)
-    fetchData()
+    reload()
   }
 
   async function saveExpenses(detail: Detail) {
@@ -94,20 +99,20 @@ export function SalaryView() {
     })
     setSaving(false)
     setEditingRow(null)
-    fetchData()
+    reload()
   }
 
   return (
     <div className="space-y-6">
       {/* 月選択 */}
       <div className="flex items-center gap-3">
-        <Button variant="outline" size="icon" onClick={() => setMonth(subMonths(month, 1))}>
+        <Button variant="outline" size="icon" onClick={() => changeMonth(subMonths(month, 1))}>
           <ChevronLeft className="w-4 h-4" />
         </Button>
         <span className="font-semibold text-lg min-w-[100px] text-center">
           {format(month, 'yyyy年M月', { locale: ja })}
         </span>
-        <Button variant="outline" size="icon" onClick={() => setMonth(addMonths(month, 1))}>
+        <Button variant="outline" size="icon" onClick={() => changeMonth(addMonths(month, 1))}>
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
@@ -117,11 +122,11 @@ export function SalaryView() {
 
       {!loading && !error && (
         <div className="space-y-3">
-          {data.length === 0 && <p className="text-sm text-gray-400">この月のデータはありません</p>}
-          {data.map((g) => (
+          {guides.length === 0 && <p className="text-sm text-gray-400">この月のデータはありません</p>}
+          {guides.map((g) => (
             <button
               key={g.name}
-              onClick={() => setSelected(g)}
+              onClick={() => setSelectedName(g.name)}
               className="w-full bg-white rounded-lg p-4 shadow-sm border hover:shadow-md transition-shadow text-left"
             >
               <div className="flex items-center justify-between">
@@ -138,7 +143,7 @@ export function SalaryView() {
         </div>
       )}
 
-      <Dialog open={!!selected} onOpenChange={() => { setSelected(null); setEditingRow(null) }}>
+      <Dialog open={!!selected} onOpenChange={() => { setSelectedName(null); setEditingRow(null) }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{selected?.name}　給与内訳</DialogTitle>

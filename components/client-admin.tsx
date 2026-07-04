@@ -9,9 +9,9 @@ import { Label } from '@/components/ui/label'
 import { Trash2, Plus } from 'lucide-react'
 import type { Client } from '@/lib/types'
 
-type Props = { userId: string; clients: Client[] }
+type Props = { clients: Client[] }
 
-export function ClientAdminView({ userId, clients }: Props) {
+export function ClientAdminView({ clients }: Props) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -45,6 +45,7 @@ export function ClientAdminView({ userId, clients }: Props) {
   }
 
   async function handleDelete(id: string) {
+    if (!confirm('このクライアントを削除しますか？関連する予約データもすべて削除されます。')) return
     const supabase = createClient()
     await supabase.from('clients').delete().eq('id', id)
     router.refresh()

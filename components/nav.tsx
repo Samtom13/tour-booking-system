@@ -11,11 +11,9 @@ type NavItem = { label: string; href: string }
 
 export function Nav({
   clientName,
-  clientSlug,
   items,
 }: {
   clientName: string
-  clientSlug: string
   items: NavItem[]
 }) {
   const pathname = usePathname()

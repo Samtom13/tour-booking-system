@@ -31,7 +31,8 @@ export function ClientBookingForm({ clientId }: { clientId: string }) {
     const supabase = createClient()
     await supabase.from('bookings').insert({
       client_id: clientId,
-      scheduled_at: form.scheduled_at,
+      // datetime-localの値はTZ情報を持たないため、JSTとして明示して保存する
+      scheduled_at: `${form.scheduled_at}:00+09:00`,
       guest_name: form.guest_name,
       guest_count: parseInt(form.guest_count),
       booking_site: form.booking_site || null,

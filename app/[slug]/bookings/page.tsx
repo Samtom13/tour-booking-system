@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { ClientBookingForm } from '@/components/client-booking-form'
 import { Badge } from '@/components/ui/badge'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { formatJST, jstMonthRange, jstMonthLabel } from '@/lib/datetime'
 
 export default async function ClientBookingsPage({
   params,
@@ -26,10 +25,8 @@ export default async function ClientBookingsPage({
     .eq('client_id', clientId)
     .order('scheduled_at', { ascending: false })
 
-  // OTA別サマリー（当月）
-  const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
+  // OTA別サマリー（当月・JST基準）
+  const { start: monthStart, end: monthEnd } = jstMonthRange()
 
   const monthBookings = bookings?.filter(
     (b) => b.scheduled_at >= monthStart && b.scheduled_at <= monthEnd
@@ -46,7 +43,7 @@ export default async function ClientBookingsPage({
     {}
   )
 
-  const currentMonth = format(now, 'yyyy年M月', { locale: ja })
+  const currentMonth = jstMonthLabel()
 
   return (
     <div className="space-y-6">
@@ -82,7 +79,7 @@ export default async function ClientBookingsPage({
                   {b.booking_site && <Badge variant="outline" className="text-xs">{b.booking_site}</Badge>}
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {format(new Date(b.scheduled_at), 'M/d (E) HH:mm', { locale: ja })}
+                  {formatJST(b.scheduled_at, 'M/d (E) HH:mm')}
                 </p>
               </div>
               {b.revenue != null && (
