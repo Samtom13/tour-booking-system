@@ -28,7 +28,7 @@ export default async function ClientLayout({
 
   const NAV_ITEMS = [
     { label: 'カレンダー', href: `/${slug}` },
-    { label: '予約管理', href: `/${slug}/bookings` },
+    { label: '売上管理', href: `/${slug}/sales` },
   ]
 
   return (

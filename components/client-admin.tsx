@@ -15,6 +15,7 @@ export function ClientAdminView({ clients }: Props) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
+  const [commission, setCommission] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -22,6 +23,8 @@ export function ClientAdminView({ clients }: Props) {
     e.preventDefault()
     if (!name) { setError('クライアント名を入力してください'); return }
     if (slug && !/^[a-z0-9-]+$/.test(slug.toLowerCase())) { setError('スラッグは英小文字・数字・ハイフンのみ使えます'); return }
+    const rate = commission === '' ? 0 : Number(commission)
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) { setError('手数料率は0〜100で入力してください'); return }
 
     setLoading(true)
     setError('')
@@ -29,7 +32,7 @@ export function ClientAdminView({ clients }: Props) {
     const res = await fetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, slug: slug.toLowerCase() }),
+      body: JSON.stringify({ name, slug: slug.toLowerCase(), commission_rate: rate }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -40,6 +43,7 @@ export function ClientAdminView({ clients }: Props) {
 
     setName('')
     setSlug('')
+    setCommission('')
     setLoading(false)
     router.refresh()
   }
@@ -73,6 +77,19 @@ export function ClientAdminView({ clients }: Props) {
             placeholder="heian-gyokuo（任意）"
           />
         </div>
+        <div className="space-y-1">
+          <Label>Bond手数料率（％）</Label>
+          <Input
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            value={commission}
+            onChange={(e) => setCommission(e.target.value)}
+            placeholder="例：20"
+          />
+          <p className="text-xs text-gray-400">売上のうちBondが受け取る割合。残りがクライアントへの支払いになります。</p>
+        </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
         <Button type="submit" size="sm" disabled={loading}>
           <Plus className="w-4 h-4 mr-1" />
@@ -86,7 +103,10 @@ export function ClientAdminView({ clients }: Props) {
           <div key={c.id} className="bg-white rounded-lg p-4 shadow-sm border flex items-center justify-between">
             <div>
               <p className="font-medium">{c.name}</p>
-              <p className="text-xs text-gray-400">/{c.slug}</p>
+              <p className="text-xs text-gray-400">
+                /{c.slug}
+                {!c.is_bond && <span className="ml-2">手数料 {c.commission_rate}%</span>}
+              </p>
             </div>
             {!c.is_bond && (
               <button

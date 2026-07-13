@@ -3,6 +3,7 @@ export type Client = {
   name: string
   slug: string
   is_bond: boolean
+  commission_rate: number
   created_at: string
 }
 
