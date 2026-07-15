@@ -158,8 +158,7 @@ export function SalaryView() {
                     <th className="text-right py-2 pr-2">基本報酬</th>
                     <th className="text-center py-2 pr-2">レビュー</th>
                     <th className="text-right py-2 pr-2">ボーナス</th>
-                    <th className="text-right py-2 pr-2">経費</th>
-                    <th className="text-right py-2"></th>
+                    <th className="text-right py-2">経費</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,23 +181,22 @@ export function SalaryView() {
                           ? <span className="text-green-600">¥{d.reviewBonus.toLocaleString()}</span>
                           : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="py-2 pr-2 text-right">
-                        {editingRow === d.date ? (
-                          <Input
-                            type="number"
-                            value={editExpenses}
-                            onChange={(e) => setEditExpenses(e.target.value)}
-                            className="w-24 h-7 text-right text-sm"
-                          />
-                        ) : (
-                          <span>¥{d.expenses.toLocaleString()}</span>
-                        )}
-                      </td>
                       <td className="py-2 text-right">
                         {editingRow === d.date ? (
-                          <div className="flex gap-1 justify-end">
-                            <button onClick={() => saveExpenses(d)} disabled={saving} className="text-green-500 hover:text-green-700 p-1">
-                              <Check className="w-4 h-4" />
+                          <div className="flex items-center gap-1 justify-end">
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editExpenses}
+                              onChange={(e) => setEditExpenses(e.target.value)}
+                              className="w-20 h-7 text-right text-sm"
+                            />
+                            <button
+                              onClick={() => saveExpenses(d)}
+                              disabled={saving}
+                              className="flex items-center gap-0.5 text-xs bg-green-600 text-white rounded px-2 h-7 hover:bg-green-700 disabled:opacity-50 whitespace-nowrap"
+                            >
+                              <Check className="w-3 h-3" />保存
                             </button>
                             <button onClick={() => setEditingRow(null)} className="text-gray-400 hover:text-gray-600 p-1">
                               <X className="w-4 h-4" />
@@ -207,9 +205,10 @@ export function SalaryView() {
                         ) : (
                           <button
                             onClick={() => { setEditingRow(d.date); setEditExpenses(String(d.expenses)) }}
-                            className="text-gray-300 hover:text-blue-400 p-1"
+                            className="inline-flex items-center gap-1 hover:text-blue-500 group"
                           >
-                            <Pencil className="w-3 h-3" />
+                            <span>¥{d.expenses.toLocaleString()}</span>
+                            <Pencil className="w-3 h-3 text-gray-300 group-hover:text-blue-400" />
                           </button>
                         )}
                       </td>
@@ -227,11 +226,10 @@ export function SalaryView() {
                         : '—'}
                     </td>
                     <td className="pt-3 text-right">¥{selected.expensesTotal.toLocaleString()}</td>
-                    <td />
                   </tr>
                   <tr className="font-bold text-base">
                     <td colSpan={5} className="pt-1">支払総額</td>
-                    <td colSpan={2} className="pt-1 text-right">¥{selected.total.toLocaleString()}</td>
+                    <td className="pt-1 text-right">¥{selected.total.toLocaleString()}</td>
                   </tr>
                 </tfoot>
               </table>
