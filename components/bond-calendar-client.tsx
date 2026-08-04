@@ -41,7 +41,7 @@ export function BondCalendarClient({ clientId, bookings, tours, guides }: Props)
   const [detailOpen, setDetailOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
-  const [salaryData, setSalaryData] = useState<{ baseWageTotal: number; expensesTotal: number } | null>(null)
+  const [salaryData, setSalaryData] = useState<{ baseWageTotal: number; expensesTotal: number; snsTotal: number } | null>(null)
   const [salaryLoading, setSalaryLoading] = useState(false)
 
   const events = bookings.map((b) => ({
@@ -80,7 +80,8 @@ export function BondCalendarClient({ clientId, bookings, tours, guides }: Props)
       if (data.guides) {
         const baseWageTotal = data.guides.reduce((s: number, g: { baseWageTotal: number }) => s + g.baseWageTotal, 0)
         const expensesTotal = data.guides.reduce((s: number, g: { expensesTotal: number }) => s + g.expensesTotal, 0)
-        setSalaryData({ baseWageTotal, expensesTotal })
+        const snsTotal = data.snsTeam?.total ?? 0
+        setSalaryData({ baseWageTotal, expensesTotal, snsTotal })
       }
     } catch {
       setSalaryData(null)
@@ -110,7 +111,9 @@ export function BondCalendarClient({ clientId, bookings, tours, guides }: Props)
   }
 
   const totalLaborCost = salaryData ? salaryData.baseWageTotal + salaryData.expensesTotal : null
-  const grossProfit = totalLaborCost != null ? totalRevenue - totalLaborCost : null
+  const snsTotal = salaryData?.snsTotal ?? 0
+  // 粗利 = 売上 − 人件費（ガイド報酬＋経費）− SNSチーム報酬
+  const grossProfit = totalLaborCost != null ? totalRevenue - totalLaborCost - snsTotal : null
 
   return (
     <div className="space-y-6">
@@ -148,7 +151,7 @@ export function BondCalendarClient({ clientId, bookings, tours, guides }: Props)
         <h2 className="text-sm font-medium text-gray-500 mb-3">
           {format(currentMonth, 'yyyy年M月', { locale: ja })} サマリー
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
           <div className="bg-white rounded-lg p-4 shadow-sm border">
             <p className="text-xs text-gray-500 mb-1">売上合計</p>
             <p className="text-lg font-bold">¥{totalRevenue.toLocaleString()}</p>
@@ -159,6 +162,16 @@ export function BondCalendarClient({ clientId, bookings, tours, guides }: Props)
               <p className="text-sm text-gray-300">計算中...</p>
             ) : totalLaborCost != null ? (
               <p className="text-lg font-bold">¥{totalLaborCost.toLocaleString()}</p>
+            ) : (
+              <p className="text-sm text-gray-300">—</p>
+            )}
+          </div>
+          <div className="bg-white rounded-lg p-4 shadow-sm border">
+            <p className="text-xs text-gray-500 mb-1">SNSチーム</p>
+            {salaryLoading ? (
+              <p className="text-sm text-gray-300">計算中...</p>
+            ) : salaryData != null ? (
+              <p className="text-lg font-bold text-purple-600">¥{snsTotal.toLocaleString()}</p>
             ) : (
               <p className="text-sm text-gray-300">—</p>
             )}

@@ -29,10 +29,15 @@ type GuideResult = {
   details: Detail[]
 }
 
+type SnsDetail = { date: string; tourName: string; revenue: number; cost: number; grossProfit: number; share: number }
+type SnsTeam = { total: number; details: SnsDetail[] }
+
 export function SalaryView() {
   const [month, setMonth] = useState(new Date())
   // dataがnull＝読み込み中。選択中ガイドは名前で持ち、常に最新データから引く
   const [data, setData] = useState<GuideResult[] | null>(null)
+  const [sns, setSns] = useState<SnsTeam | null>(null)
+  const [snsOpen, setSnsOpen] = useState(false)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [selectedName, setSelectedName] = useState<string | null>(null)
@@ -49,7 +54,7 @@ export function SalaryView() {
       .then((d) => {
         if (cancelled) return
         if (d.error) setError(d.error)
-        else setData(d.guides)
+        else { setData(d.guides); setSns(d.snsTeam ?? null) }
       })
       .catch(() => { if (!cancelled) setError('データの取得に失敗しました') })
     return () => { cancelled = true }
@@ -140,6 +145,50 @@ export function SalaryView() {
               </div>
             </button>
           ))}
+
+          {/* SNSチーム（自社予約案件の粗利20%）確定分がある場合のみ表示 */}
+          {sns && sns.total > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+              <button
+                onClick={() => setSnsOpen((v) => !v)}
+                className="w-full p-4 text-left hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold">SNSチーム</p>
+                  <p className="text-lg font-bold text-purple-600">¥{sns.total.toLocaleString()}</p>
+                </div>
+                <p className="mt-1 text-sm text-gray-500">自社予約案件 粗利の20%（{sns.details.length}件）</p>
+              </button>
+              {snsOpen && (
+                <div className="border-t px-4 py-3 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-gray-500 text-xs">
+                        <th className="text-left py-2 pr-2">日付</th>
+                        <th className="text-left py-2 pr-2">ツアー</th>
+                        <th className="text-right py-2 pr-2">売上</th>
+                        <th className="text-right py-2 pr-2">原価</th>
+                        <th className="text-right py-2 pr-2">粗利</th>
+                        <th className="text-right py-2">SNS(20%)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sns.details.map((d) => (
+                        <tr key={d.date + d.tourName} className="border-b last:border-0">
+                          <td className="py-2 pr-2 whitespace-nowrap">{d.date}</td>
+                          <td className="py-2 pr-2">{d.tourName}</td>
+                          <td className="py-2 pr-2 text-right">¥{d.revenue.toLocaleString()}</td>
+                          <td className="py-2 pr-2 text-right text-gray-500">¥{d.cost.toLocaleString()}</td>
+                          <td className="py-2 pr-2 text-right">¥{d.grossProfit.toLocaleString()}</td>
+                          <td className="py-2 text-right font-semibold text-purple-600">¥{d.share.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

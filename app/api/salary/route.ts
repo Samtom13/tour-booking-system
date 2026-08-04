@@ -65,6 +65,13 @@ export async function GET(req: NextRequest) {
   type GuideRecord = { name: string; hourlyRate: number; details: Detail[] }
   const guideMap: Record<string, GuideRecord> = {}
 
+  // SNSチーム分配（自社予約案件の粗利20%）
+  // 予約サイトに「自社」ラベルが付いた案件が対象。報告書が提出され
+  // ガイド報酬・経費が確定した（=このループに現れた）案件のみ計上する。
+  const SNS_RATE = 0.2
+  type SnsDetail = { date: string; tourName: string; revenue: number; cost: number; grossProfit: number; share: number }
+  const snsDetails: SnsDetail[] = []
+
   for (const row of filtered) {
     const guideName = row[0] ?? ''
     const date = row[1] ?? ''
@@ -94,9 +101,11 @@ export async function GET(req: NextRequest) {
       guideMap[guideName] = { name: guideName, hourlyRate: guide.hourly_rate, details: [] }
     }
 
+    const tourName = tour?.name ?? (booking?.custom_hours ? `その他（${booking.custom_hours}時間）` : '不明')
+
     guideMap[guideName].details.push({
       date,
-      tourName: tour?.name ?? (booking?.custom_hours ? `その他（${booking.custom_hours}時間）` : '不明'),
+      tourName,
       baseWage: baseWageBase,
       reviewBonus,
       expenses,
@@ -105,6 +114,16 @@ export async function GET(req: NextRequest) {
       guideId: guide.id,
       customExpenses: override?.custom_expenses ?? null,
     })
+
+    // 自社予約案件ならSNSチーム分配を計上（粗利がプラスの場合のみ）
+    const isInHouse = (booking?.booking_site ?? '').includes('自社')
+    if (isInHouse && booking) {
+      const revenue = booking.revenue ?? 0
+      const cost = baseWageBase + reviewBonus + expenses
+      const grossProfit = revenue - cost
+      const share = Math.round(Math.max(0, grossProfit) * SNS_RATE)
+      snsDetails.push({ date, tourName, revenue, cost, grossProfit, share })
+    }
   }
 
   const result = Object.values(guideMap).map((g) => ({
@@ -117,7 +136,12 @@ export async function GET(req: NextRequest) {
     details: g.details,
   }))
 
-  return NextResponse.json({ guides: result })
+  const snsTeam = {
+    total: snsDetails.reduce((s, d) => s + d.share, 0),
+    details: snsDetails,
+  }
+
+  return NextResponse.json({ guides: result, snsTeam })
 }
 
 // レビュー報酬・経費の上書き保存
