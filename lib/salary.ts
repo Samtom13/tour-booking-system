@@ -45,6 +45,14 @@ export function extractExpenses(text: string | null): number {
     const yenSuffixMatches = line.match(/([\d.,]+)\s*円/g)
     if (yenSuffixMatches) {
       for (const m of yenSuffixMatches) total += parseAmount(m.replace(/円/g, ''))
+      continue
+    }
+
+    // ¥も円も付かない「項目名 金額」形式（例「バス荒神口～京都駅　230」）。
+    // 行末の数字を金額として拾う。途中の「(3)」のような数字は無視される。
+    const trailingMatch = line.match(/(\d[\d.,]*)\s*$/)
+    if (trailingMatch) {
+      total += parseAmount(trailingMatch[1])
     }
   }
 
