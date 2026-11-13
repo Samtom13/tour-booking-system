@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { extractExpenses } from '@/lib/salary'
+import { formatJST } from '@/lib/datetime'
+
+// シートの日付（手入力。"2025/10/1" / "2025/10/01" 等、ゼロ埋め不定）を
+// 正規化して JST 基準の日付キー "YYYY-MM-DD" を返す
+function sheetDateKey(raw: string): string {
+  const parts = (raw ?? '').trim().split('/')
+  if (parts.length !== 3) return ''
+  const [y, m, d] = parts.map((p) => p.trim())
+  if (!y || !m || !d) return ''
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -18,8 +29,7 @@ export async function GET(req: NextRequest) {
   if (!config) return NextResponse.json({ error: 'スプレッドシートが未設定です' }, { status: 400 })
 
   const [year, mon] = month.split('-')
-  const startDate = `${year}/${mon}/01`
-  const nextMon = parseInt(mon) === 12 ? `${parseInt(year)+1}/01/01` : `${year}/${String(parseInt(mon)+1).padStart(2,'0')}/01`
+  const monthKey = `${year}-${mon.padStart(2, '0')}`
 
   const privateKey = (process.env.GOOGLE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n')
   const serviceEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? ''
@@ -34,15 +44,15 @@ export async function GET(req: NextRequest) {
   const sheetData = await sheetRes.json()
   const rows: string[][] = sheetData.values ?? []
 
-  const filtered = rows.slice(1).filter((row) => {
-    const dateStr = row[1] ?? ''
-    return dateStr >= startDate && dateStr < nextMon
-  })
+  // シート日付を JST 日付キーに正規化し、当月(JST)の行だけ残す
+  const filtered = rows.slice(1).filter((row) => sheetDateKey(row[1] ?? '').startsWith(monthKey))
 
-  const monthStart = `${year}-${mon}-01T00:00:00`
-  const nextMonth = parseInt(mon) === 12
-    ? `${parseInt(year)+1}-01-01T00:00:00`
-    : `${year}-${String(parseInt(mon)+1).padStart(2,'0')}-01T00:00:00`
+  // 当月(JST)の予約を取得する UTC 範囲。scheduled_at は UTC 保存のため
+  // JST の月初・翌月初を UTC に変換して境界に使う（朝方の予約が前後月へ漏れるのを防ぐ）
+  const y = parseInt(year), m = parseInt(mon)
+  const JST_OFFSET_MS = 9 * 60 * 60 * 1000
+  const monthStart = new Date(Date.UTC(y, m - 1, 1) - JST_OFFSET_MS).toISOString()
+  const nextMonth = new Date(Date.UTC(y, m, 1) - JST_OFFSET_MS).toISOString()
 
   const [{ data: guides }, { data: bookings }, { data: overrides }] = await Promise.all([
     supabase.from('guides').select('*').eq('client_id', clientId),
@@ -81,9 +91,12 @@ export async function GET(req: NextRequest) {
     const guide = guides?.find((g) => g.name === guideName)
     if (!guide) continue
 
-    const datePrefix = date.replace(/\//g, '-')
+    // シート日付(JST)と予約の JST 日付キーを突合する。
+    // scheduled_at は UTC 保存なので、UTC 文字列の先頭比較では
+    // 朝9時前の予約が前日扱いになり一致しないため formatJST で JST 日付に揃える。
+    const dateKey = sheetDateKey(date)
     const booking = bookings?.find(
-      (b) => b.guide?.name === guideName && b.scheduled_at.startsWith(datePrefix)
+      (b) => b.guide?.name === guideName && formatJST(b.scheduled_at, 'yyyy-MM-dd') === dateKey
     )
 
     const tour = booking?.tour
